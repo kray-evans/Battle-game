@@ -1,130 +1,157 @@
+import random
 import streamlit as st
-import streamlit.components.v1 as components
 
-st.set_page_config(page_title="JoJo Fighting Game", page_icon="⭐", layout="centered")
+# Cấu hình trang Streamlit
+st.set_page_config(
+    page_title="JoJo: Bizarre Battle", page_icon="⭐", layout="centered"
+)
 
-st.title("⭐ JoJo's Bizarre Adventure: 2D Battle")
-st.markdown("Trận chiến giữa **Jotaro** và **DIO**. Chơi trực tiếp bên dưới:")
+# Khởi tạo trạng thái trò chơi (Game State)
+if "initialized" not in st.session_state:
+    st.session_state.p1_hp = 100
+    st.session_state.p2_hp = 100
+    st.session_state.p1_energy = 0  # Năng lượng Stand
+    st.session_state.p2_energy = 0
+    st.session_state.game_over = False
+    st.session_state.winner = ""
+    st.session_state.log = (
+        "Trận chiến bắt đầu! Jotaro và DIO đối đầu tại Cairo."
+    )
+    st.session_state.initialized = True
 
-# Dùng iframe trỏ trực tiếp đến mã nguồn game HTML sạch sẽ
-game_html = """
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { margin: 0; background: #0b0c10; display: flex; flex-direction: column; align-items: center; justify-content: height: 100vh; color: white; font-family: Arial; }
-        canvas { background: #1f2833; border: 3px solid #c5a059; border-radius: 8px; }
-        .controls { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
-        button { padding: 10px 18px; font-weight: bold; background: #c5a059; border: none; border-radius: 6px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <canvas id="gameCanvas" width="650" height="350"></canvas>
-    <div class="controls">
-        <button id="lBtn">◀ TRÁI</button>
-        <button id="rBtn">PHẢI ▶</button>
-        <button id="jBtn">🡡 NHẢY</button>
-        <button id="pBtn">💥 ORA</button>
-    </div>
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        let p1 = { x: 80, y: 240, w: 40, h: 80, hp: 100, vy: 0, jump: false };
-        let p2 = { x: 500, y: 240, w: 40, h: 80, hp: 100 };
-        let mLeft = false, mRight = false, over = false;
 
-        window.addEventListener("keydown", e => {
-            if (e.key === "ArrowLeft") mLeft = true;
-            if (e.key === "ArrowRight") mRight = true;
-            if (e.key === "ArrowUp" && !p1.jump) { p1.vy = -10; p1.jump = true; }
-        });
-        window.addEventListener("keyup", e => {
-            if (e.key === "ArrowLeft") mLeft = false;
-            if (e.key === "ArrowRight") mRight = false;
-        });
+def reset_game():
+  st.session_state.p1_hp = 100
+  st.session_state.p2_hp = 100
+  st.session_state.p1_energy = 0
+  st.session_state.p2_energy = 0
+  st.session_state.game_over = False
+  st.session_state.winner = ""
+  st.session_state.log = "Trận đấu mới đã bắt đầu! ORA ORA vs MUDA MUDA!"
 
-        const bind = (id, start, end) => {
-            let b = document.getElementById(id);
-            b.addEventListener("mousedown", start); b.addEventListener("mouseup", end);
-            b.addEventListener("touchstart", e => { e.preventDefault(); start(); });
-            b.addEventListener("touchend", e => { e.preventDefault(); end(); });
-        };
-        bind("lBtn", () => mLeft = true, () => mLeft = false);
-        bind("rBtn", () => mRight = true, () => mRight = false);
-        bind("jBtn", () => { if (!p1.jump) { p1.vy = -10; p1.jump = true; } }, () => {});
-        bind("pBtn", () => { if (Math.abs(p1.x - p2.x) < 70) p2.hp -= 15; }, () => {});
 
-        function update() {
-            if (over) return;
-            if (mLeft && p1.x > 10) p1.x -= 4;
-            if (mRight && p1.x < canvas.width - 50) p1.x += 4;
-            p1.y += p1.vy; p1.vy += 0.5;
-            if (p1.y > 240) { p1.y = 240; p1.vy = 0; p1.jump = false; }
+# Giao diện tiêu đề
+st.title("⭐ JoJo's Bizarre Adventure: Stand Battle ⭐")
+st.markdown("---")
 
-            // AI DIO
-            let d = p1.x - p2.x;
-            if (Math.abs(d) > 60) p2.x += d > 0 ? 1.5 : -1.5;
-            else if (Math.random() < 0.02) p1.hp -= 10;
+# Hiển thị thanh máu (HP) và năng lượng
+col1, col2 = st.columns(2)
 
-            if (p1.hp <= 0 || p2.hp <= 0) over = true;
-        }
+with col1:
+  st.subheader("Jotaro Kujo (Star Platinum)")
+  st.metric(label="HP", value=f"{st.session_state.p1_hp}/100")
+  st.progress(max(0, st.session_state.p1_hp) / 100)
+  st.write(f"⚡ Năng lượng Stand: {st.session_state.p1_energy}/100")
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#111"; ctx.fillRect(0, 320, canvas.width, 30);
-            ctx.fillStyle = "#c5a059"; ctx.fillRect(0, 320, canvas.width, 3);
+with col2:
+  st.subheader("DIO (The World)")
+  st.metric(label="HP", value=f"{st.session_state.p2_hp}/100")
+  st.progress(max(0, st.session_state.p2_hp) / 100)
+  st.write(f"⚡ Năng lượng Stand: {st.session_state.p2_energy}/100")
 
-            // Jotaro
-            ctx.fillStyle = "#1f4068"; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
-            ctx.fillStyle = "#f1c27d"; ctx.fillRect(p1.x + 5, p1.y - 12, 30, 15);
+st.markdown("---")
 
-            // DIO
-            ctx.fillStyle = "#e43f5a"; ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
-            ctx.fillStyle = "#f1c27d"; ctx.fillRect(p2.x + 5, p2.y - 12, 30, 15);
+# Khung nhật ký trận đấu
+st.info(f"📢 **Diễn biến:** {st.session_state.log}")
 
-            // Máu
-            ctx.fillStyle = "#333"; ctx.fillRect(20, 15, 180, 15);
-            ctx.fillStyle = "#4ecc6d"; ctx.fillRect(22, 17, (p1.hp/100)*176, 11);
-            ctx.fillStyle = "#333"; ctx.fillRect(450, 15, 180, 15);
-            ctx.fillStyle = "#e74c3c"; ctx.fillRect(452, 17, (p2.hp/100)*176, 11);
 
-            if (over) {
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0,0,canvas.width,canvas.height);
-                ctx.fillStyle = "#fff"; ctx.font = "bold 26px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p1.hp <= 0 ? "DIO THẮNG TRẬN!" : "JOTARO CHIẾN THẮNG!", canvas.width/2, canvas.height/2);
-            }
-        }
+# Xử lý lượt đánh của người chơi (Jotaro)
+def player_action(action_type):
+  if st.session_state.p2_hp <= 0 or st.session_state.p1_hp <= 0:
+    return
 
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
-        loop();
-    </script>
-</body>
-</html>
-"""
+  # --- LƯỢT CỦA JOTARO ---
+  p1_dmg = 0
+  p1_msg = ""
+  if action_type == "punch":
+    p1_dmg = random.randint(8, 15)
+    st.session_state.p1_energy = min(100, st.session_state.p1_energy + 20)
+    p1_msg = f"Jotaro tung đòn đấm nhanh, gây {p1_dmg} sát thương!"
+  elif action_type == "ora":
+    p1_dmg = random.randint(18, 25)
+    st.session_state.p1_energy = min(100, st.session_state.p1_energy + 35)
+    p1_msg = f"⭐ ORA ORA ORA! Jotaro tung chuỗi liên hoàn đấm gây {p1_dmg} sát thương!"
+  elif action_type == "timestop":
+    if st.session_state.p1_energy >= 100:
+      p1_dmg = random.randint(30, 45)
+      st.session_state.p1_energy = 0
+      p1_msg = f"⏱️ STAR PLATINUM: THE WORLD! Jotaro dừng thời gian và chém một cú chí mạng gây {p1_dmg} sát thương!"
+    else:
+      st.warning("Chưa đủ năng lượng để dừng thời gian!")
+      return
 
-components.html(game_html, height=450, scrolling=False)
-erText = "DIO THẮNG!"
-            if (p2.hp <= 0) { gameOver = true; winnerText = "JOTARO THẮNG!"; }
-        }
+  st.session_state.p2_hp -= p1_dmg
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+  # Kiểm tra DIO đã thua chưa
+  if st.session_state.p2_hp <= 0:
+    st.session_state.p2_hp = 0
+    st.session_state.p1_hp = max(0, st.session_state.p1_hp)
+    st.session_state.game_over = True
+    st.session_state.winner = "Jotaro Kujo"
+    st.session_state.log = f"{p1_msg} 🏆 **DIO đã bị hạ gục! Jotaro chiến thắng!**"
+    return
 
-            // Sàn
-            ctx.fillStyle = "#111";
-            ctx.fillRect(0, 360, canvas.width, 40);
-            ctx.fillStyle = "#c5a059";
-            ctx.fillRect(0, 360, canvas.width, 4);
+  # --- LƯỢT PHẢN CÔNG CỦA MÁY (DIO) ---
+  # AI đơn giản cho DIO
+  ai_actions = ["knife", "muda", "za_warudo"]
+  # Nếu DIO đủ năng lượng và máu thấp, ưu tiên tuyệt chiêu
+  if st.session_state.p2_energy >= 100:
+    ai_action = "za_warudo"
+  else:
+    ai_action = random.choice(ai_actions)
 
-            // P1
-            ctx.fillStyle = p1.color;
-            ctx.fillRect(p1.x, p1.y, p1.width, p1.height);
-            ctx.fillStyle = "#f1c27d";
-            ctx.fillRect(p1.x + 10, p1.y - 15, 30, 20);
+  p2_dmg = 0
+  p2_msg = ""
+  if ai_action == "knife":
+    p2_dmg = random.randint(8, 14)
+    st.session_state.p2_energy = min(100, st.session_state.p2_energy + 20)
+    p2_msg = f"DIO phóng dao nhấp nhô, gây {p2_dmg} sát thương cho Jotaro."
+  elif ai_action == "muda":
+    p2_dmg = random.randint(15, 24)
+    st.session_state.p2_energy = min(100, st.session_state.p2_energy + 30)
+    p2_msg = f"💛 MUDA MUDA MUDA! DIO tấn công bằng The World, gây {p2_dmg} sát thương!"
+  elif ai_action == "za_warudo":
+    p2_dmg = random.randint(28, 40)
+    st.session_state.p2_energy = 0
+    p2_msg = f"🛑 TOKI WO TOMARE! DIO dừng thời gian và bồi một đòn cực nặng gây {p2_dmg} sát thương!"
 
-            // P2
-            ctx.fillStyle = p2.color;
-            ctx.fillRect(p2.x, p2.y, p2.width, p2.height);
+  st.session_state.p1_hp -= p2_dmg
+
+  # Kiểm tra Jotaro thua chưa
+  if st.session_state.p1_hp <= 0:
+    st.session_state.p1_hp = 0
+    st.session_state.p2_hp = max(0, st.session_state.p2_hp)
+    st.session_state.game_over = True
+    st.session_state.winner = "DIO"
+    st.session_state.log = (
+        f"{p1_msg}\n\n{p2_msg}\n\n🏆 **Jotaro gục ngã! DIO chiến thắng!**"
+    )
+  else:
+    st.session_state.log = f"{p1_msg}\n\n{p2_msg}"
+
+
+# Các nút điều khiển trận đấu
+if not st.session_state.game_over:
+  st.subheader("Lượt của bạn (Jotaro)")
+  c1, c2, c3 = st.columns(3)
+  with c1:
+    if st.button("👊 Đấm Thường"):
+      player_action("punch")
+      st.rerun()
+  with c2:
+    if st.button("⭐ ORA RUSH (Đấm liên hoàn)"):
+      player_action("ora")
+      st.rerun()
+  with c3:
+    if st.button("⏱️ Star Platinum: Dừng Thời Gian"):
+      player_action("timestop")
+      st.rerun()
+else:
+  st.success(f"Trận đấu đã kết thúc! Người chiến thắng: {st.session_state.winner}")
+  if st.button("🔄 Chơi Lại Trận Mới"):
+    reset_game()
+    st.rerun()
+.width, p2.height);
             ctx.fillStyle = "#f1c27d";
             ctx.fillRect(p2.x + 10, p2.y - 15, 30, 20);
 
