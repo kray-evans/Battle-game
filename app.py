@@ -1,315 +1,345 @@
-```python
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="JoJo's Bizarre Adventure - 2D Fighter", page_icon="⭐", layout="centered")
+st.set_page_config(page_title="JoJo Bizarre Fighting Game", page_icon="⭐", layout="centered")
 
-st.markdown("""
-<div style="text-align: center;">
-    <h1 style="color: #f1c40f; margin-bottom: 0;">⭐ JOJO'S BIZARRE ADVENTURE: BATTLE TIDE ⭐</h1>
-    <p style="color: #bdc3c7; font-size: 15px;">Chọn nhân vật, triệu hồi Stand và tung đòn ORA ORA / MUDA MUDA!</p>
-</div>
-""", unsafe_allow_html=True)
+st.title("⭐ JoJo's Bizarre Adventure: 2D Battle")
+st.markdown("Trận chiến đỉnh cao giữa **Jotaro Kujo** và **DIO**! Sử dụng các nút điều khiển bên dưới hoặc bàn phím để tung đòn **ORA ORA / MUDA MUDA**.")
 
-jojo_game_code = """
+game_code = """
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JoJo 2D Fighter</title>
     <style>
         body {
             margin: 0;
-            background: #0d0f18;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0b0c10;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
             overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
         }
         #game-container {
             position: relative;
-            box-shadow: 0 10px 40px rgba(241, 196, 15, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
             border-radius: 12px;
             overflow: hidden;
-            border: 3px solid #f1c40f;
+            border: 3px solid #c5a059;
         }
         canvas {
+            background: linear-gradient(to bottom, #1f2833, #0b0c10);
             display: block;
-            background: linear-gradient(180deg, #1b1e36 0%, #0d0f18 100%);
         }
-        /* Màn hình Chọn Nhân vật */
-        #char-select {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(13, 15, 24, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        .char-grid {
-            display: flex;
-            gap: 30px;
-            margin-top: 20px;
-        }
-        .char-card {
-            width: 140px;
-            height: 200px;
-            border: 3px solid #4a69bd;
-            border-radius: 10px;
-            background: #1e272e;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .char-card:hover, .char-card.selected {
-            border-color: #f1c40f;
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
-        }
-        /* Bảng điều khiển cảm ứng cho Mobile */
-        .controls-container {
+        .controls {
             margin-top: 10px;
             display: flex;
-            justify-content: space-between;
-            width: 750px;
-            max-width: 100%;
-            padding: 0 10px;
-            box-sizing: border-box;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
-        .dpad, .action-pad {
-            display: flex;
-            gap: 8px;
-        }
-        .btn {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            border: none;
-            padding: 12px 18px;
-            font-size: 14px;
+        button {
+            padding: 12px 20px;
+            font-size: 15px;
             font-weight: bold;
+            background: linear-gradient(135deg, #c5a059, #f3e5ab);
+            color: #111;
+            border: none;
             border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.4);
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .btn:active {
+        button:active {
             transform: scale(0.95);
-            background: #962d22;
-        }
-        .btn-blue {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-        }
-        .btn-yellow {
-            background: linear-gradient(135deg, #f1c40f, #f39c12);
-            color: #000;
-        }
-        .instructions {
-            font-size: 11px;
-            color: #95a5a6;
-            margin-top: 6px;
-            text-align: center;
+            background: #fff;
         }
     </style>
 </head>
 <body>
-
     <div id="game-container">
-        <!-- MÀN HÌNH CHỌN NHÂN VẬT -->
-        <div id="char-select">
-            <h2 style="color: #f1c40f; text-shadow: 0 0 10px #f1c40f;">CHỌN ĐẤU SĨ CỦA BẠN</h2>
-            <div class="char-grid">
-                <div class="char-card" onclick="selectCharacter('jotaro')">
-                    <div style="font-size: 40px;">⭐</div>
-                    <h3 style="margin: 10px 0 5px 0; color: #3498db;">JOTARO</h3>
-                    <p style="font-size: 12px; color: #bdc3c7; text-align: center;">Stand: Star Platinum</p>
-                </div>
-                <div class="char-card" onclick="selectCharacter('dio')">
-                    <div style="font-size: 40px;">🌙</div>
-                    <h3 style="margin: 10px 0 5px 0; color: #e74c3c;">DIO</h3>
-                    <p style="font-size: 12px; color: #bdc3c7; text-align: center;">Stand: The World</p>
-                </div>
-            </div>
-            <p style="margin-top: 30px; font-size: 13px; color: #f1c40f;">Bấm vào nhân vật để bắt đầu trận đấu!</p>
-        </div>
-
-        <canvas id="gameCanvas" width="750" height="400"></canvas>
+        <canvas id="gameCanvas" width="700" height="400"></canvas>
     </div>
-
-    <!-- NÚT ĐIỀU KHIỂN MOBILE -->
-    <div class="controls-container">
-        <div class="dpad">
-            <button class="btn btn-blue" id="leftBtn">◀ TRÁI</button>
-            <button class="btn btn-blue" id="rightBtn">PHẢI ▶</button>
-            <button class="btn btn-blue" id="jumpBtn">▲ NHẢY</button>
-        </div>
-        <div class="action-pad">
-            <button class="btn" id="atkBtn">ĐÁNH (J)</button>
-            <button class="btn btn-yellow" id="specialBtn">STAND RUSH (K)</button>
-            <button class="btn" style="background:#8e44ad;" id="ultBtn">ULTI (L)</button>
-        </div>
+    
+    <div class="controls">
+        <button id="leftBtn">◀ TRÁI</button>
+        <button id="rightBtn">PHẢI ▶</button>
+        <button id="jumpBtn">🡡 NHẢY</button>
+        <button id="punchBtn">💥 ĐẤM (ORA)</button>
+        <button id="specialBtn">⚡ TUYỆT KỸ</button>
     </div>
-    <div class="instructions">PC: Dùng A/D hoặc Mũi tên để di chuyển, J (Đánh), K (Stand Rush), L (Ultimate)</div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        let gameStarted = false;
-        let playerChoice = 'jotaro';
+        // Trạng thái game
+        let gameOver = false;
+        let winnerText = "";
+        let screenShake = 0;
 
-        function selectCharacter(char) {
-            playerChoice = char;
-            document.getElementById("char-select").style.display = "none";
-            initGame();
-            gameStarted = true;
-        }
+        // Nhân vật Player 1 (Jotaro)
+        let p1 = {
+            name: "JOTARO",
+            x: 120,
+            y: 270,
+            width: 50,
+            height: 90,
+            color: "#1f4068",
+            hp: 100,
+            maxHp: 100,
+            energy: 0,
+            vx: 0,
+            vy: 0,
+            isJumping: false,
+            isAttacking: false,
+            attackTimer: 0,
+            facing: "right"
+        };
 
-        // Trạng thái game & Biến chiến đấu
-        let player, enemy, particles = [], texts = [];
+        // Nhân vật Player 2 / CPU (DIO)
+        let p2 = {
+            name: "DIO",
+            x: 520,
+            y: 270,
+            width: 50,
+            height: 90,
+            color: "#e43f5a",
+            hp: 100,
+            maxHp: 100,
+            energy: 0,
+            vx: 0,
+            vy: 0,
+            isJumping: false,
+            isAttacking: false,
+            attackTimer: 0,
+            facing: "left"
+        };
+
         let keys = {};
+        window.addEventListener("keydown", (e) => { keys[e.key] = true; });
+        window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
-        class Fighter {
-            constructor(x, y, isPlayer, name, color, standName) {
-                this.x = x;
-                this.y = y;
-                this.width = 50;
-                this.height = 100;
-                this.vx = 0;
-                this.vy = 0;
-                this.isPlayer = isPlayer;
-                this.name = name;
-                this.color = color;
-                this.standName = standName;
-                
-                this.hp = 100;
-                this.maxHp = 100;
-                this.standGauge = 0; // Tăng dần khi đánh trúng
-                
-                this.isJumping = false;
-                this.isAttacking = false;
-                this.attackTimer = 0;
-                this.attackType = null;
-                this.facing = isPlayer ? 1 : -1;
-                this.stunTimer = 0;
-                this.win = false;
-            }
+        // Xử lý nút bấm di động
+        const bindButton = (id, actionStart, actionEnd) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener("mousedown", actionStart);
+            btn.addEventListener("mouseup", actionEnd);
+            btn.addEventListener("touchstart", (e) => { e.preventDefault(); actionStart(); });
+            btn.addEventListener("touchend", (e) => { e.preventDefault(); actionEnd(); });
+        };
 
-            update() {
-                if (this.stunTimer > 0) {
-                    this.stunTimer--;
-                    return;
-                }
+        let mobileMoveLeft = false;
+        let mobileMoveRight = false;
 
-                // Trọng lực
-                this.vy += 0.5;
-                this.y += this.vy;
-                this.x += this.vx;
+        bindButton("leftBtn", () => mobileMoveLeft = true, () => mobileMoveLeft = false);
+        bindButton("rightBtn", () => mobileMoveRight = true, () => mobileMoveRight = false);
+        bindButton("jumpBtn", () => { if (!p1.isJumping) { p1.vy = -12; p1.isJumping = true; } }, () => {});
+        bindButton("punchBtn", () => triggerAttack(p1, p2, "ORA ORA!"), () => {});
+        bindButton("specialBtn", () => triggerSpecial(p1, p2), () => {});
 
-                // Sàn đấu
-                if (this.y > 280) {
-                    this.y = 280;
-                    this.vy = 0;
-                    this.isJumping = false;
-                }
-
-                // Giới hạn biên màn hình
-                if (this.x < 20) this.x = 20;
-                if (this.x > canvas.width - 70) this.x = canvas.width - 70;
-
-                // Giảm tốc độ trượt
-                this.vx *= 0.8;
-
-                if (this.attackTimer > 0) {
-                    this.attackTimer--;
-                    if (this.attackTimer === 0) this.isAttacking = false;
-                }
-            }
-
-            draw() {
-                ctx.save();
-                // Vẽ bóng nhân vật
-                ctx.fillStyle = "rgba(0,0,0,0.3)";
-                ctx.beginPath();
-                ctx.ellipse(this.x + this.width/2, 380, 25, 8, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Vẽ thân nhân vật chính
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-
-                // Mũ / Tóc đặc trưng
-                ctx.fillStyle = "#111";
-                if (this.name === "JOTARO") {
-                    ctx.fillRect(this.x + (this.facing > 0 ? 20 : 0), this.y, 30, 25);
-                } else {
-                    // Tóc vàng DIO
-                    ctx.fillStyle = "#f1c40f";
-                    ctx.fillRect(this.x + 5, this.y - 10, 40, 20);
-                }
-
-                // Vẽ hiệu ứng Stand nếu đang tấn công đặc biệt
-                if (this.isAttacking && this.attackType === 'special') {
-                    ctx.fillStyle = this.name === "JOTARO" ? "rgba(52, 152, 219, 0.7)" : "rgba(241, 196, 15, 0.7)";
-                    let standX = this.facing > 0 ? this.x + 50 : this.x - 70;
-                    ctx.fillRect(standX, this.y - 20, 70, 120);
-                }
-
-                ctx.restore();
-            }
-
-            attack(type) {
-                if (this.isAttacking || this.stunTimer > 0) return;
-                this.isAttacking = true;
-                this.attackType = type;
-
-                if (type === 'normal') {
-                    this.attackTimer = 15;
-                    checkHit(this, 15, 10, 'normal');
-                } else if (type === 'special') {
-                    this.attackTimer = 35;
-                    checkHit(this, 35, 25, 'special');
-                    spawnShoutText(this.x, this.y - 30, this.name === "JOTARO" ? "ORA ORA ORA!" : "MUDA MUDA MUDA!", this.color);
-                } else if (type === 'ult' && this.standGauge >= 100) {
-                    this.attackTimer = 50;
-                    this.standGauge = 0;
-                    checkHit(this, 50, 45, 'ult');
-                    spawnShoutText(canvas.width / 2 - 100, 150, this.name === "JOTARO" ? "STAR PLATINUM: THE WORLD!" : "THE WORLD: TOKI WO TOMARE!", "#e74c3c");
-                }
-            }
-        }
-
-        function initGame() {
-            let pColor = playerChoice === 'jotaro' ? '#2980b9' : '#c0392b';
-            let eColor = playerChoice === 'jotaro' ? '#c0392b' : '#2980b9';
-            let pName = playerChoice === 'jotaro' ? 'JOTARO' : 'DIO';
-            let eName = playerChoice === 'jotaro' ? 'DIO' : 'JOTARO';
-
-            player = new Fighter(150, 280, true, pName, pColor, pName === 'JOTARO' ? 'Star Platinum' : 'The World');
-            enemy = new Fighter(550, 280, false, eName, eColor, eName === 'JOTARO' ? 'Star Platinum' : 'The World');
-            particles = [];
-            texts = [];
-        }
-
-        function checkHit(attacker, range, dmg, type) {
-            let defender = attacker.isPlayer ? enemy : player;
-            let distance = Math.abs((attacker.x + attacker.width/2) - (defender.x + defender.width/2));
+        function triggerAttack(attacker, defender, shout) {
+            if (attacker.isAttacking || gameOver) return;
+            attacker.isAttacking = true;
+            attacker.attackTimer = 15;
             
-            if (distance < 90 + (type === 'ult' ? 50 : 0)) {
-                defender.hp -= dmg;
+            // Kiểm tra khoảng cách đánh trúng
+            let dist = Math.abs((attacker.x + attacker.width/2) - (defender.x + defender.width/2));
+            if (dist < 100) {
+                defender.hp -= 12;
+                attacker.energy = Math.min(100, attacker.energy + 20);
+                screenShake = 10;
+                
+                // Hiệu ứng chữ kêu tên chiêu thức
+                floatingText = { text: shout, x: defender.x, y: defender.y - 20, alpha: 1.0 };
+            }
+        }
+
+        function triggerSpecial(attacker, defender) {
+            if (attacker.energy < 100 || gameOver) return;
+            attacker.energy = 0;
+            defender.hp -= 35;
+            screenShake = 25;
+            floatingText = { text: "STAR PLATINUM: THE WORLD!", x: canvas.width/2 - 100, y: 100, alpha: 1.5 };
+        }
+
+        let floatingText = null;
+
+        // AI điều khiển DIO đơn giản
+        let aiTimer = 0;
+        function updateAI() {
+            if (gameOver) return;
+            aiTimer++;
+            
+            let dist = p1.x - p2.x;
+            if (Math.abs(dist) > 80) {
+                p2.x += dist > 0 ? 2 : -2;
+                p2.facing = dist > 0 ? "right" : "left";
+            } else if (aiTimer % 40 === 0 && Math.random() < 0.7) {
+                triggerAttack(p2, p1, "MUDA MUDA!");
+            }
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Điều khiển P1 (Jotaro) qua bàn phím
+            if (keys["ArrowLeft"] || keys["a"] || mobileMoveLeft) {
+                p1.x -= 4;
+                p1.facing = "left";
+            }
+            if (keys["ArrowRight"] || keys["d"] || mobileMoveRight) {
+                p1.x += 4;
+                p1.facing = "right";
+            }
+            if ((keys["ArrowUp"] || keys["w"]) && !p1.isJumping) {
+                p1.vy = -12;
+                p1.isJumping = true;
+            }
+            if (keys[" "] && !p1.isAttacking) {
+                triggerAttack(p1, p2, "ORA!");
+            }
+
+            // Trọng lực P1 & P2
+            p1.y += p1.vy;
+            p1.vy += 0.6;
+            if (p1.y > 270) { p1.y = 270; p1.vy = 0; p1.isJumping = false; }
+
+            p2.y += p2.vy;
+            p2.vy += 0.6;
+            if (p2.y > 270) { p2.y = 270; p2.vy = 0; p2.isJumping = false; }
+
+            // Giới hạn biên màn hình
+            p1.x = Math.max(20, Math.min(canvas.width - 70, p1.x));
+            p2.x = Math.max(20, Math.min(canvas.width - 70, p2.x));
+
+            if (p1.attackTimer > 0) p1.attackTimer--;
+            if (p2.attackTimer > 0) p2.attackTimer--;
+
+            updateAI();
+
+            // Kiểm tra thắng thua
+            if (p1.hp <= 0) {
+                p1.hp = 0;
+                gameOver = true;
+                winnerText = "DIO THẮNG TRẬN!";
+            } else if (p2.hp <= 0) {
+                p2.hp = 0;
+                gameOver = true;
+                winnerText = "JOTARO THẮNG TRẬN!";
+            }
+
+            if (screenShake > 0) screenShake--;
+        }
+
+        function drawHUD() {
+            // Thanh máu P1
+            ctx.fillStyle = "#333";
+            ctx.fillRect(30, 20, 250, 22);
+            ctx.fillStyle = "#4ecc6d";
+            ctx.fillRect(32, 22, (p1.hp / p1.maxHp) * 246, 18);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 12px Arial";
+            ctx.fillText(p1.name + " (" + p1.hp + "HP)", 40, 36);
+
+            // Thanh năng lượng Stand P1
+            ctx.fillStyle = "#333";
+            ctx.fillRect(30, 48, 180, 10);
+            ctx.fillStyle = "#f39c12";
+            ctx.fillRect(32, 50, (p1.energy / 100) * 176, 6);
+
+            // Thanh máu P2
+            ctx.fillStyle = "#333";
+            ctx.fillRect(420, 20, 250, 22);
+            ctx.fillStyle = "#e74c3c";
+            ctx.fillRect(422, 22, (p2.hp / p2.maxHp) * 246, 18);
+            ctx.fillStyle = "white";
+            ctx.fillText(p2.name + " (" + p2.hp + "HP)", 430, 36);
+        }
+
+        function drawFighter(f) {
+            ctx.save();
+            // Thân nhân vật
+            ctx.fillStyle = f.color;
+            ctx.fillRect(f.x, f.y, f.width, f.height);
+
+            // Đầu nhân vật
+            ctx.fillStyle = "#f1c27d";
+            ctx.fillRect(f.x + 10, f.y - 15, 30, 20);
+
+            // Hiệu ứng khi đang đánh (Tung đòn Stand)
+            if (f.attackTimer > 0) {
+                ctx.fillStyle = f === p1 ? "rgba(52, 152, 219, 0.6)" : "rgba(231, 76, 60, 0.6)";
+                let punchX = f.facing === "right" ? f.x + f.width : f.x - 40;
+                ctx.fillRect(punchX, f.y + 20, 40, 30);
+            }
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.save();
+            if (screenShake > 0) {
+                let offsetX = (Math.random() - 0.5) * screenShake;
+                let offsetY = (Math.random() - 0.5) * screenShake;
+                ctx.translate(offsetX, offsetY);
+            }
+
+            // Vẽ sàn đấu
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#111";
+            ctx.fillRect(0, 360, canvas.width, 40);
+            ctx.fillStyle = "#c5a059";
+            ctx.fillRect(0, 360, canvas.width, 4);
+
+            drawFighter(p1);
+            drawFighter(p2);
+            drawHUD();
+
+            // Hiệu ứng chữ bay
+            if (floatingText) {
+                ctx.fillStyle = "#f39c12";
+                ctx.font = "bold 22px Arial";
+                ctx.fillText(floatingText.text, floatingText.x, floatingText.y);
+                floatingText.alpha -= 0.03;
+                if (floatingText.alpha <= 0) floatingText = null;
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = "#f3e5ab";
+                ctx.font = "bold 35px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(winnerText, canvas.width / 2, canvas.height / 2 - 20);
+                
+                ctx.font = "16px Arial";
+                ctx.fillStyle = "#fff";
+                ctx.fillText("Tải lại trang (F5) để chơi lại ván mới", canvas.width / 2, canvas.height / 2 + 25);
+                ctx.textAlign = "left";
+            }
+
+            ctx.restore();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
+"""
+
+components.html(game_code, height=480, scrolling=False)
+nder.hp -= dmg;
                 defender.stunTimer = 15;
                 defender.vx = attacker.facing * (type === 'ult' ? 12 : 6);
                 defender.vy = -4;
