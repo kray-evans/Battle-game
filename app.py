@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="JoJo Bizarre Fighting Game", page_icon="⭐", layout="centered")
 
 st.title("⭐ JoJo's Bizarre Adventure: 2D Battle")
-st.markdown("Trận chiến đỉnh cao giữa **Jotaro Kujo** và **DIO**! Sử dụng các nút điều khiển bên dưới hoặc bàn phím để tung đòn **ORA ORA / MUDA MUDA**.")
+st.markdown("Trận chiến đỉnh cao giữa **Jotaro** và **DIO**! Dùng các nút điều khiển bên dưới.")
 
 game_code = """
 <!DOCTYPE html>
@@ -19,7 +19,7 @@ game_code = """
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             color: white;
             overflow: hidden;
         }
@@ -31,7 +31,7 @@ game_code = """
             border: 3px solid #c5a059;
         }
         canvas {
-            background: linear-gradient(to bottom, #1f2833, #0b0c10);
+            background: #1f2833;
             display: block;
         }
         .controls {
@@ -45,17 +45,13 @@ game_code = """
             padding: 12px 20px;
             font-size: 15px;
             font-weight: bold;
-            background: linear-gradient(135deg, #c5a059, #f3e5ab);
+            background: #c5a059;
             color: #111;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.4);
-            user-select: none;
-            -webkit-user-select: none;
         }
         button:active {
-            transform: scale(0.95);
             background: #fff;
         }
     </style>
@@ -69,126 +65,122 @@ game_code = """
         <button id="leftBtn">◀ TRÁI</button>
         <button id="rightBtn">PHẢI ▶</button>
         <button id="jumpBtn">🡡 NHẢY</button>
-        <button id="punchBtn">💥 ĐẤM (ORA)</button>
-        <button id="specialBtn">⚡ TUYỆT KỸ</button>
+        <button id="punchBtn">💥 ORA ORA</button>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Trạng thái game
         let gameOver = false;
         let winnerText = "";
-        let screenShake = 0;
 
-        // Nhân vật Player 1 (Jotaro)
-        let p1 = {
-            name: "JOTARO",
-            x: 120,
-            y: 270,
-            width: 50,
-            height: 90,
-            color: "#1f4068",
-            hp: 100,
-            maxHp: 100,
-            energy: 0,
-            vx: 0,
-            vy: 0,
-            isJumping: false,
-            isAttacking: false,
-            attackTimer: 0,
-            facing: "right"
-        };
-
-        // Nhân vật Player 2 / CPU (DIO)
-        let p2 = {
-            name: "DIO",
-            x: 520,
-            y: 270,
-            width: 50,
-            height: 90,
-            color: "#e43f5a",
-            hp: 100,
-            maxHp: 100,
-            energy: 0,
-            vx: 0,
-            vy: 0,
-            isJumping: false,
-            isAttacking: false,
-            attackTimer: 0,
-            facing: "left"
-        };
+        let p1 = { name: "JOTARO", x: 100, y: 270, width: 50, height: 90, color: "#1f4068", hp: 100, vy: 0, isJumping: false };
+        let p2 = { name: "DIO", x: 550, y: 270, width: 50, height: 90, color: "#e43f5a", hp: 100, vy: 0, isJumping: false };
 
         let keys = {};
         window.addEventListener("keydown", (e) => { keys[e.key] = true; });
         window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
-        // Xử lý nút bấm di động
-        const bindButton = (id, actionStart, actionEnd) => {
+        const bindBtn = (id, action) => {
             const btn = document.getElementById(id);
-            btn.addEventListener("mousedown", actionStart);
-            btn.addEventListener("mouseup", actionEnd);
-            btn.addEventListener("touchstart", (e) => { e.preventDefault(); actionStart(); });
-            btn.addEventListener("touchend", (e) => { e.preventDefault(); actionEnd(); });
+            btn.addEventListener("click", action);
+            btn.addEventListener("touchstart", (e) => { e.preventDefault(); action(); });
         };
 
-        let mobileMoveLeft = false;
-        let mobileMoveRight = false;
+        let moveLeft = false;
+        let moveRight = false;
 
-        bindButton("leftBtn", () => mobileMoveLeft = true, () => mobileMoveLeft = false);
-        bindButton("rightBtn", () => mobileMoveRight = true, () => mobileMoveRight = false);
-        bindButton("jumpBtn", () => { if (!p1.isJumping) { p1.vy = -12; p1.isJumping = true; } }, () => {});
-        bindButton("punchBtn", () => triggerAttack(p1, p2, "ORA ORA!"), () => {});
-        bindButton("specialBtn", () => triggerSpecial(p1, p2), () => {});
+        document.getElementById("leftBtn").addEventListener("mousedown", () => moveLeft = true);
+        document.getElementById("leftBtn").addEventListener("mouseup", () => moveLeft = false);
+        document.getElementById("leftBtn").addEventListener("touchstart", (e) => { e.preventDefault(); moveLeft = true; });
+        document.getElementById("leftBtn").addEventListener("touchend", (e) => { e.preventDefault(); moveLeft = false; });
 
-        function triggerAttack(attacker, defender, shout) {
-            if (attacker.isAttacking || gameOver) return;
-            attacker.isAttacking = true;
-            attacker.attackTimer = 15;
-            
-            // Kiểm tra khoảng cách đánh trúng
-            let dist = Math.abs((attacker.x + attacker.width/2) - (defender.x + defender.width/2));
-            if (dist < 100) {
-                defender.hp -= 12;
-                attacker.energy = Math.min(100, attacker.energy + 20);
-                screenShake = 10;
-                
-                // Hiệu ứng chữ kêu tên chiêu thức
-                floatingText = { text: shout, x: defender.x, y: defender.y - 20, alpha: 1.0 };
+        document.getElementById("rightBtn").addEventListener("mousedown", () => moveRight = true);
+        document.getElementById("rightBtn").addEventListener("mouseup", () => moveRight = false);
+        document.getElementById("rightBtn").addEventListener("touchstart", (e) => { e.preventDefault(); moveRight = true; });
+        document.getElementById("rightBtn").addEventListener("touchend", (e) => { e.preventDefault(); moveRight = false; });
+
+        bindBtn("jumpBtn", () => { if (!p1.isJumping) { p1.vy = -12; p1.isJumping = true; } });
+        bindBtn("punchBtn", () => {
+            if (Math.abs(p1.x - p2.x) < 90) {
+                p2.hp -= 15;
             }
-        }
-
-        function triggerSpecial(attacker, defender) {
-            if (attacker.energy < 100 || gameOver) return;
-            attacker.energy = 0;
-            defender.hp -= 35;
-            screenShake = 25;
-            floatingText = { text: "STAR PLATINUM: THE WORLD!", x: canvas.width/2 - 100, y: 100, alpha: 1.5 };
-        }
-
-        let floatingText = null;
-
-        // AI điều khiển DIO đơn giản
-        let aiTimer = 0;
-        function updateAI() {
-            if (gameOver) return;
-            aiTimer++;
-            
-            let dist = p1.x - p2.x;
-            if (Math.abs(dist) > 80) {
-                p2.x += dist > 0 ? 2 : -2;
-                p2.facing = dist > 0 ? "right" : "left";
-            } else if (aiTimer % 40 === 0 && Math.random() < 0.7) {
-                triggerAttack(p2, p1, "MUDA MUDA!");
-            }
-        }
+        });
 
         function update() {
             if (gameOver) return;
 
-            // Điều khiển P1 (Jotaro) qua bàn phím
-            if (keys["ArrowLeft"] || keys["a"] || mobileMoveLeft) {
+            if ((keys["ArrowLeft"] || moveLeft) && p1.x > 10) p1.x -= 4;
+            if ((keys["ArrowRight"] || moveRight) && p1.x < canvas.width - 60) p1.x += 4;
+
+            p1.y += p1.vy;
+            p1.vy += 0.6;
+            if (p1.y > 270) { p1.y = 270; p1.vy = 0; p1.isJumping = false; }
+
+            // AI đơn giản cho DIO
+            let dist = p1.x - p2.x;
+            if (Math.abs(dist) > 70) {
+                p2.x += dist > 0 ? 2 : -2;
+            } else if (Math.random() < 0.03) {
+                p1.hp -= 10;
+            }
+
+            if (p1.hp <= 0) { gameOver = true; winnerText = "DIO THẮNG!"; }
+            if (p2.hp <= 0) { gameOver = true; winnerText = "JOTARO THẮNG!"; }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Sàn
+            ctx.fillStyle = "#111";
+            ctx.fillRect(0, 360, canvas.width, 40);
+            ctx.fillStyle = "#c5a059";
+            ctx.fillRect(0, 360, canvas.width, 4);
+
+            // P1
+            ctx.fillStyle = p1.color;
+            ctx.fillRect(p1.x, p1.y, p1.width, p1.height);
+            ctx.fillStyle = "#f1c27d";
+            ctx.fillRect(p1.x + 10, p1.y - 15, 30, 20);
+
+            // P2
+            ctx.fillStyle = p2.color;
+            ctx.fillRect(p2.x, p2.y, p2.width, p2.height);
+            ctx.fillStyle = "#f1c27d";
+            ctx.fillRect(p2.x + 10, p2.y - 15, 30, 20);
+
+            // Máu
+            ctx.fillStyle = "#333"; ctx.fillRect(30, 20, 200, 20);
+            ctx.fillStyle = "#4ecc6d"; ctx.fillRect(32, 22, (p1.hp/100)*196, 16);
+
+            ctx.fillStyle = "#333"; ctx.fillRect(470, 20, 200, 20);
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(472, 22, (p2.hp/100)*196, 16);
+
+            if (gameOver) {
+                ctx.fillStyle = "rgba(0,0,0,0.8)";
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(winnerText, canvas.width/2, canvas.height/2);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
+"""
+
+components.html(game_code, height=480, scrolling=False)
+] || mobileMoveLeft) {
                 p1.x -= 4;
                 p1.facing = "left";
             }
