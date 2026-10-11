@@ -1,132 +1,109 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="JoJo Bizarre Fighting Game", page_icon="⭐", layout="centered")
+st.set_page_config(page_title="JoJo Fighting Game", page_icon="⭐", layout="centered")
 
 st.title("⭐ JoJo's Bizarre Adventure: 2D Battle")
-st.markdown("Trận chiến đỉnh cao giữa **Jotaro** và **DIO**! Dùng các nút điều khiển bên dưới.")
+st.markdown("Trận chiến giữa **Jotaro** và **DIO**. Chơi trực tiếp bên dưới:")
 
-game_code = """
+# Dùng iframe trỏ trực tiếp đến mã nguồn game HTML sạch sẽ
+game_html = """
 <!DOCTYPE html>
 <html>
 <head>
     <style>
-        body {
-            margin: 0;
-            background: #0b0c10;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            color: white;
-            overflow: hidden;
-        }
-        #game-container {
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 3px solid #c5a059;
-        }
-        canvas {
-            background: #1f2833;
-            display: block;
-        }
-        .controls {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        button {
-            padding: 12px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            background: #c5a059;
-            color: #111;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        button:active {
-            background: #fff;
-        }
+        body { margin: 0; background: #0b0c10; display: flex; flex-direction: column; align-items: center; justify-content: height: 100vh; color: white; font-family: Arial; }
+        canvas { background: #1f2833; border: 3px solid #c5a059; border-radius: 8px; }
+        .controls { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
+        button { padding: 10px 18px; font-weight: bold; background: #c5a059; border: none; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="700" height="400"></canvas>
-    </div>
-    
+    <canvas id="gameCanvas" width="650" height="350"></canvas>
     <div class="controls">
-        <button id="leftBtn">◀ TRÁI</button>
-        <button id="rightBtn">PHẢI ▶</button>
-        <button id="jumpBtn">🡡 NHẢY</button>
-        <button id="punchBtn">💥 ORA ORA</button>
+        <button id="lBtn">◀ TRÁI</button>
+        <button id="rBtn">PHẢI ▶</button>
+        <button id="jBtn">🡡 NHẢY</button>
+        <button id="pBtn">💥 ORA</button>
     </div>
-
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        let p1 = { x: 80, y: 240, w: 40, h: 80, hp: 100, vy: 0, jump: false };
+        let p2 = { x: 500, y: 240, w: 40, h: 80, hp: 100 };
+        let mLeft = false, mRight = false, over = false;
 
-        let gameOver = false;
-        let winnerText = "";
-
-        let p1 = { name: "JOTARO", x: 100, y: 270, width: 50, height: 90, color: "#1f4068", hp: 100, vy: 0, isJumping: false };
-        let p2 = { name: "DIO", x: 550, y: 270, width: 50, height: 90, color: "#e43f5a", hp: 100, vy: 0, isJumping: false };
-
-        let keys = {};
-        window.addEventListener("keydown", (e) => { keys[e.key] = true; });
-        window.addEventListener("keyup", (e) => { keys[e.key] = false; });
-
-        const bindBtn = (id, action) => {
-            const btn = document.getElementById(id);
-            btn.addEventListener("click", action);
-            btn.addEventListener("touchstart", (e) => { e.preventDefault(); action(); });
-        };
-
-        let moveLeft = false;
-        let moveRight = false;
-
-        document.getElementById("leftBtn").addEventListener("mousedown", () => moveLeft = true);
-        document.getElementById("leftBtn").addEventListener("mouseup", () => moveLeft = false);
-        document.getElementById("leftBtn").addEventListener("touchstart", (e) => { e.preventDefault(); moveLeft = true; });
-        document.getElementById("leftBtn").addEventListener("touchend", (e) => { e.preventDefault(); moveLeft = false; });
-
-        document.getElementById("rightBtn").addEventListener("mousedown", () => moveRight = true);
-        document.getElementById("rightBtn").addEventListener("mouseup", () => moveRight = false);
-        document.getElementById("rightBtn").addEventListener("touchstart", (e) => { e.preventDefault(); moveRight = true; });
-        document.getElementById("rightBtn").addEventListener("touchend", (e) => { e.preventDefault(); moveRight = false; });
-
-        bindBtn("jumpBtn", () => { if (!p1.isJumping) { p1.vy = -12; p1.isJumping = true; } });
-        bindBtn("punchBtn", () => {
-            if (Math.abs(p1.x - p2.x) < 90) {
-                p2.hp -= 15;
-            }
+        window.addEventListener("keydown", e => {
+            if (e.key === "ArrowLeft") mLeft = true;
+            if (e.key === "ArrowRight") mRight = true;
+            if (e.key === "ArrowUp" && !p1.jump) { p1.vy = -10; p1.jump = true; }
+        });
+        window.addEventListener("keyup", e => {
+            if (e.key === "ArrowLeft") mLeft = false;
+            if (e.key === "ArrowRight") mRight = false;
         });
 
+        const bind = (id, start, end) => {
+            let b = document.getElementById(id);
+            b.addEventListener("mousedown", start); b.addEventListener("mouseup", end);
+            b.addEventListener("touchstart", e => { e.preventDefault(); start(); });
+            b.addEventListener("touchend", e => { e.preventDefault(); end(); });
+        };
+        bind("lBtn", () => mLeft = true, () => mLeft = false);
+        bind("rBtn", () => mRight = true, () => mRight = false);
+        bind("jBtn", () => { if (!p1.jump) { p1.vy = -10; p1.jump = true; } }, () => {});
+        bind("pBtn", () => { if (Math.abs(p1.x - p2.x) < 70) p2.hp -= 15; }, () => {});
+
         function update() {
-            if (gameOver) return;
+            if (over) return;
+            if (mLeft && p1.x > 10) p1.x -= 4;
+            if (mRight && p1.x < canvas.width - 50) p1.x += 4;
+            p1.y += p1.vy; p1.vy += 0.5;
+            if (p1.y > 240) { p1.y = 240; p1.vy = 0; p1.jump = false; }
 
-            if ((keys["ArrowLeft"] || moveLeft) && p1.x > 10) p1.x -= 4;
-            if ((keys["ArrowRight"] || moveRight) && p1.x < canvas.width - 60) p1.x += 4;
+            // AI DIO
+            let d = p1.x - p2.x;
+            if (Math.abs(d) > 60) p2.x += d > 0 ? 1.5 : -1.5;
+            else if (Math.random() < 0.02) p1.hp -= 10;
 
-            p1.y += p1.vy;
-            p1.vy += 0.6;
-            if (p1.y > 270) { p1.y = 270; p1.vy = 0; p1.isJumping = false; }
+            if (p1.hp <= 0 || p2.hp <= 0) over = true;
+        }
 
-            // AI đơn giản cho DIO
-            let dist = p1.x - p2.x;
-            if (Math.abs(dist) > 70) {
-                p2.x += dist > 0 ? 2 : -2;
-            } else if (Math.random() < 0.03) {
-                p1.hp -= 10;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#111"; ctx.fillRect(0, 320, canvas.width, 30);
+            ctx.fillStyle = "#c5a059"; ctx.fillRect(0, 320, canvas.width, 3);
+
+            // Jotaro
+            ctx.fillStyle = "#1f4068"; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
+            ctx.fillStyle = "#f1c27d"; ctx.fillRect(p1.x + 5, p1.y - 12, 30, 15);
+
+            // DIO
+            ctx.fillStyle = "#e43f5a"; ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
+            ctx.fillStyle = "#f1c27d"; ctx.fillRect(p2.x + 5, p2.y - 12, 30, 15);
+
+            // Máu
+            ctx.fillStyle = "#333"; ctx.fillRect(20, 15, 180, 15);
+            ctx.fillStyle = "#4ecc6d"; ctx.fillRect(22, 17, (p1.hp/100)*176, 11);
+            ctx.fillStyle = "#333"; ctx.fillRect(450, 15, 180, 15);
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(452, 17, (p2.hp/100)*176, 11);
+
+            if (over) {
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = "#fff"; ctx.font = "bold 26px Arial"; ctx.textAlign = "center";
+                ctx.fillText(p1.hp <= 0 ? "DIO THẮNG TRẬN!" : "JOTARO CHIẾN THẮNG!", canvas.width/2, canvas.height/2);
             }
+        }
 
-            if (p1.hp <= 0) { gameOver = true; winnerText = "DIO THẮNG!"; }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        loop();
+    </script>
+</body>
+</html>
+"""
+
+components.html(game_html, height=450, scrolling=False)
+erText = "DIO THẮNG!"; }
             if (p2.hp <= 0) { gameOver = true; winnerText = "JOTARO THẮNG!"; }
         }
 
