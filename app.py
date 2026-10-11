@@ -8,16 +8,16 @@ st.set_page_config(
 
 # Khởi tạo trạng thái trò chơi (Game State)
 if "initialized" not in st.session_state:
-    st.session_state.p1_hp = 100
-    st.session_state.p2_hp = 100
-    st.session_state.p1_energy = 0  # Năng lượng Stand
-    st.session_state.p2_energy = 0
-    st.session_state.game_over = False
-    st.session_state.winner = ""
-    st.session_state.log = (
-        "Trận chiến bắt đầu! Jotaro và DIO đối đầu tại Cairo."
-    )
-    st.session_state.initialized = True
+  st.session_state.p1_hp = 100
+  st.session_state.p2_hp = 100
+  st.session_state.p1_energy = 0
+  st.session_state.p2_energy = 0
+  st.session_state.game_over = False
+  st.session_state.winner = ""
+  st.session_state.log = (
+      "Trận chiến bắt đầu! Jotaro Kujo đối đầu với DIO tại Cairo."
+  )
+  st.session_state.initialized = True
 
 
 def reset_game():
@@ -27,25 +27,28 @@ def reset_game():
   st.session_state.p2_energy = 0
   st.session_state.game_over = False
   st.session_state.winner = ""
-  st.session_state.log = "Trận đấu mới đã bắt đầu! ORA ORA vs MUDA MUDA!"
+  st.session_state.log = "Trận đấu mới bắt đầu! ORA ORA vs MUDA MUDA!"
 
 
-# Giao diện tiêu đề
+# Giao diện chính
 st.title("⭐ JoJo's Bizarre Adventure: Stand Battle ⭐")
 st.markdown("---")
 
-# Hiển thị thanh máu (HP) và năng lượng
+# Hiển thị thông số 2 nhân vật
 col1, col2 = st.columns(2)
 
 with col1:
-  st.subheader("Jotaro Kujo (Star Platinum)")
-  st.metric(label="HP", value=f"{st.session_state.p1_hp}/100")
+  st.subheader("Jotaro Kujo")
+  st.caption("Stand: Star Platinum")
+  st.metric(label="Máu (HP)", value=f"{st.session_state.p1_hp}/100")
   st.progress(max(0, st.session_state.p1_hp) / 100)
   st.write(f"⚡ Năng lượng Stand: {st.session_state.p1_energy}/100")
 
 with col2:
-  st.subheader("DIO (The World)")
-  st.metric(label="HP", value=f"{st.session_state.p2_hp}/100")
+  st.subheader("DIO")
+  st.caption("Stand: The World")
+  st.metric(label="Máu (HP)", value=f"{st.session_
+tate.p2_hp}/100")
   st.progress(max(0, st.session_state.p2_hp) / 100)
   st.write(f"⚡ Năng lượng Stand: {st.session_state.p2_energy}/100")
 
