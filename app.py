@@ -103,7 +103,7 @@ game_html = """
 """
 
 components.html(game_html, height=450, scrolling=False)
-erText = "DIO THẮNG!"; }
+erText = {"DIO THẮNG!"; }
             if (p2.hp <= 0) { gameOver = true; winnerText = "JOTARO THẮNG!"; }
         }
 
