@@ -103,7 +103,7 @@ game_html = """
 """
 
 components.html(game_html, height=450, scrolling=False)
-erText = {"DIO THẮNG!"; }
+erText = "DIO THẮNG!"
             if (p2.hp <= 0) { gameOver = true; winnerText = "JOTARO THẮNG!"; }
         }
 
@@ -514,4 +514,5 @@ nder.hp -= dmg;
 """
 
 components.html(jojo_game_code, height=530, scrolling=False)
+```
 ```
